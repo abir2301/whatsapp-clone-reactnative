@@ -13,12 +13,17 @@ import {
   ImageBackground,
   TouchableOpacity,
   Image,
+  TextInput,
+  FlatList,
+  Modal,
 } from "react-native";
 import GlobalContext from "../context/Context";
 import { auth, db } from "../../firebase";
 import { useRoute } from "@react-navigation/native";
 import "react-native-get-random-values";
 import { nanoid } from "nanoid";
+import * as DocumentPicker from "expo-document-picker";
+
 import {
   Actions,
   Bubble,
@@ -36,7 +41,9 @@ import {
   updateDoc,
 } from "@firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
-import { pickImage, uploadImage } from "../utils/utils";
+import { pickImage, uploadImage, uploadFile } from "../utils/utils";
+import * as Linking from "expo-linking";
+
 const randomId = nanoid();
 const Chat = () => {
   const {
@@ -47,6 +54,8 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedImageView, setSeletedImageView] = useState("");
+  const [inputText, setInputText] = useState("");
+
   const route = useRoute();
   const room = route.params.room;
   const selectedImage = route.params.image;
@@ -107,7 +116,9 @@ const Chat = () => {
           const message = doc.data();
           return { ...message, createdAt: message.createdAt.toDate() };
         })
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      console.log("messagesFirestore");
+      console.log(messagesFirestore);
       appendMessages(messagesFirestore);
     });
     return () => unsubscribe();
@@ -115,19 +126,30 @@ const Chat = () => {
 
   const appendMessages = useCallback(
     (messages) => {
-      setMessages((previousMessages) =>
-        GiftedChat.append(previousMessages, messages)
-      );
-      console.log("messages ");
-      console.log(messages);
+      setMessages((previousMessages) => [...messages, ...previousMessages]);
     },
     [messages]
   );
   const onSend = async (messages = []) => {
-    const writes = messages.map((m) => addDoc(roomMessagesRef, m));
-    const lastMessage = messages[messages.length - 1];
-    writes.push(updateDoc(roomRef, { lastMessage }));
-    await Promise.all(writes);
+    // console.log("on send ");
+
+    if (inputText.trim() === "") return;
+
+    const newMessage = {
+      _id: nanoid(),
+      text: inputText.trim(),
+      createdAt: new Date(),
+      user: {
+        _id: currentUser.uid,
+        name: currentUser.displayName,
+        avatar: currentUser.photoURL,
+      },
+    };
+
+    await addDoc(roomMessagesRef, newMessage);
+    const lastMessage = newMessage;
+    await updateDoc(roomRef, { lastMessage });
+    setInputText("");
   };
   async function sendImage(uri, roomPath) {
     const { url, fileName } = await uploadImage(
@@ -154,12 +176,142 @@ const Chat = () => {
     }
   }
 
+  const handleImagePress = (image) => {
+    setSeletedImageView(image);
+    setModalVisible(true);
+  };
+  const handleFilePicker = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+      });
+      console.log(result);
+      if (!result.canceled) {
+        const { url, fileName } = await uploadFile(
+          result.assets[0].uri,
+          `files/rooms/${roomId}`,
+          result.assets[0].mimeType
+        );
+        console.log("uppload");
+        console.log(url);
+        const newFileMessage = {
+          _id: fileName,
+          createdAt: new Date(),
+          user: {
+            _id: currentUser.uid,
+            name: currentUser.displayName,
+            avatar: currentUser.photoURL,
+          },
+          file: {
+            uri: url,
+            name: result.assets[0].name,
+            type: result.assets[0].mimeType,
+          },
+        };
+        const lastMessage = { ...newFileMessage, text: "File" };
+        // await addDoc(roomMessagesRef, newFileMessage);
+        // await updateDoc(roomRef, { lastMessage });
+        await Promise.all([
+          addDoc(roomMessagesRef, newFileMessage),
+          updateDoc(roomRef, { lastMessage }),
+        ]);
+      }
+    } catch (error) {
+      console.error("Error picking file:", error);
+    }
+  };
+  const handleFilePress = (file) => {
+    const { uri, name, type } = file;
+
+    if (Linking.canOpenURL(uri)) {
+      Linking.openURL(uri);
+    } else {
+      console.error(`Cannot handle file type: ${type}`);
+    }
+  };
+
   return (
     <ImageBackground
       style={styles.container}
       source={require("../../assets/chatbg.png")}
     >
-      <GiftedChat
+      <FlatList
+        data={messages}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <View
+            style={
+              item.user.name === senderUser.name
+                ? styles.sender
+                : styles.receiver
+            }
+          >
+            <Text>{item.text}</Text>
+            <Text style={styles.timestamp}>{item.timestamp}</Text>
+            {item.image && (
+              <TouchableOpacity onPress={() => handleImagePress(item.image)}>
+                <Image
+                  style={styles.messageImage}
+                  source={{ uri: item.image }}
+                />
+              </TouchableOpacity>
+            )}
+            {item.file && (
+              <TouchableOpacity onPress={() => handleFilePress(item.file)}>
+                <Text style={styles.fileText}>{item.file.name}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+      />
+      <View style={styles.inputContainer}>
+        <TouchableOpacity
+          style={styles.cameraButton}
+          onPress={handlePhotoPicker}
+        >
+          <Ionicons name="camera" size={30} color={colors.iconGray} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.fileButton} onPress={handleFilePicker}>
+          <Ionicons name="attach" size={30} color={colors.iconGray} />
+        </TouchableOpacity>
+        <TextInput
+          style={styles.input}
+          placeholder="Type a message..."
+          value={inputText}
+          onChangeText={(text) => setInputText(text)}
+        />
+        <TouchableOpacity
+          style={{
+            height: 40,
+            width: 40,
+            borderRadius: 40,
+            backgroundColor: colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 5,
+          }}
+          onPress={onSend}
+        >
+          <Ionicons name="send" size={20} color={colors.white} />
+        </TouchableOpacity>
+      </View>
+      {selectedImageView && (
+        <Modal visible={modalVisible} transparent={true}>
+          <View style={styles.modalContainer}>
+            <Image
+              style={styles.modalImage}
+              source={{ uri: selectedImageView }}
+            />
+            <TouchableOpacity
+              style={styles.closeModalButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Text style={styles.closeModalText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+      )}
+      {/* <GiftedChat
         messages={messages}
         user={senderUser}
         renderAvatar={null}
@@ -268,7 +420,7 @@ const Chat = () => {
             </View>
           );
         }}
-      />
+      /> */}
     </ImageBackground>
   );
 };
@@ -278,6 +430,75 @@ const styles = StyleSheet.create({
   container: {
     resizeMode: "cover",
     flex: 1,
+  },
+  sender: {
+    alignSelf: "flex-end",
+    backgroundColor: "#DCF8C5",
+    padding: 8,
+    margin: 8,
+    borderRadius: 8,
+    maxWidth: "80%",
+  },
+  receiver: {
+    alignSelf: "flex-start",
+    backgroundColor: "#E5E5E5",
+    padding: 8,
+    margin: 8,
+    borderRadius: 8,
+    maxWidth: "80%",
+  },
+  timestamp: {
+    fontSize: 10,
+    color: "#888",
+    marginTop: 4,
+  },
+  messageImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    margin: 8,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    marginRight: 8,
+  },
+
+  sendButtonText: {
+    color: "#FFF",
+    fontWeight: "bold",
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+  },
+  modalImage: {
+    width: 400,
+    height: 400,
+    borderRadius: 10,
+  },
+  closeModalButton: {
+    marginTop: 16,
+    padding: 8,
+    backgroundColor: "#4CAF50",
+    borderRadius: 8,
+  },
+  closeModalText: {
+    color: "#FFF",
+    fontWeight: "bold",
+  },
+  cameraButton: {
+    margin: 2,
   },
 });
 
