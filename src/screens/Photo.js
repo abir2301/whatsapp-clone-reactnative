@@ -1,25 +1,26 @@
 //import liraries
-import React, { Component } from "react";
+import React, { Component, useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { pickImage } from "../utils/utils";
 
 // create a component
 const Photo = () => {
-  return (
-    <View style={styles.container}>
-      <Text>Photo</Text>
-    </View>
-  );
+  const navigation = useNavigation();
+  const [cancelled, setCancelled] = useState(false);
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", async () => {
+      const result = await pickImage();
+      navigation.navigate("contacts", { image: result.assets[0] });
+      if (result.canceled) {
+        setCancelled(true);
+        setTimeout(() => navigation.navigate("chats"), 100);
+      }
+    });
+    return () => unsubscribe();
+  }, [navigation, cancelled]);
+  return <View />;
 };
-
-// define your styles
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#2c3e50",
-  },
-});
 
 //make this component available to the app
 export default Photo;

@@ -16,6 +16,9 @@ import SignIn from "./src/screens/SignIn";
 import ContextWrapper from "./src/context/ContextWrapper";
 import Profile from "./src/screens/Profile";
 import Home from "./src/screens/Home";
+import Contacts from "./src/screens/Contacts";
+import Chat from "./src/screens/Chat";
+import ChatHeader from "./src/components/ChatHeader";
 export default Main = () => {
   // load assets
   const [assets] = useAssets(
@@ -80,6 +83,16 @@ function App() {
             name="home"
             component={Home}
             options={{ title: "WhatsApp " }}
+          />
+          <Stack.Screen
+            name="contacts"
+            component={Contacts}
+            options={{ title: "Select Contacts" }}
+          />
+          <Stack.Screen
+            name="chat"
+            component={Chat}
+            options={{ headerTitle: (props) => <ChatHeader {...props} /> }}
           />
         </Stack.Navigator>
       )}

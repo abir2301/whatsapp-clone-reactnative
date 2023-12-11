@@ -2,7 +2,7 @@
 import React, { Component, useContext } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Photo from "./Photo";
-import Chats from "./Chat";
+import Chats from "./Chats";
 import { Ionicons } from "@expo/vector-icons";
 import Context from "../context/Context";
 import { createStackNavigator } from "@react-navigation/stack";

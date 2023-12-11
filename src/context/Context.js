@@ -4,4 +4,6 @@ export default GlobalContext = React.createContext({
   theme,
   rooms: [],
   setRooms: () => {},
+  unfilteredRooms: [],
+  setUnfilteredRooms: () => {},
 });
