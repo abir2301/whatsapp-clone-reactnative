@@ -21,7 +21,9 @@ const SignIn = () => {
       await signUp(email, password);
     }
     if (mode === "SignIn") {
-      await signIn(email, password);
+      const res = await signIn(email, password);
+      console.log("res");
+      console.log(res);
     }
   };
   const {

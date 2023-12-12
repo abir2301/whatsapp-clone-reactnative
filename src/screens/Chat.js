@@ -40,7 +40,7 @@ import {
   setDoc,
   updateDoc,
 } from "@firebase/firestore";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { pickImage, uploadImage, uploadFile } from "../utils/utils";
 import * as Linking from "expo-linking";
 
@@ -50,6 +50,7 @@ const Chat = () => {
     theme: { colors },
   } = useContext(GlobalContext);
   const { currentUser } = auth;
+  const user = auth.currentUser;
   const [roomHash, setRoomHash] = useState("");
   const [messages, setMessages] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -126,7 +127,7 @@ const Chat = () => {
 
   const appendMessages = useCallback(
     (messages) => {
-      setMessages((previousMessages) => [...messages, ...previousMessages]);
+      setMessages((previousMessages) => [...previousMessages, ...messages]);
     },
     [messages]
   );
@@ -247,9 +248,12 @@ const Chat = () => {
             }
           >
             <Text>{item.text}</Text>
-            <Text style={styles.timestamp}>{item.timestamp}</Text>
+            <Text style={styles.timestamp}>
+              {new Date(item.createdAt).toLocaleDateString()}
+            </Text>
             {item.image && (
               <TouchableOpacity onPress={() => handleImagePress(item.image)}>
+                <Text style={styles.fileText}>Image</Text>
                 <Image
                   style={styles.messageImage}
                   source={{ uri: item.image }}
@@ -258,6 +262,7 @@ const Chat = () => {
             )}
             {item.file && (
               <TouchableOpacity onPress={() => handleFilePress(item.file)}>
+                <MaterialCommunityIcons name="file" size={30} />
                 <Text style={styles.fileText}>{item.file.name}</Text>
               </TouchableOpacity>
             )}
@@ -311,116 +316,6 @@ const Chat = () => {
           </View>
         </Modal>
       )}
-      {/* <GiftedChat
-        messages={messages}
-        user={senderUser}
-        renderAvatar={null}
-        onSend={onSend}
-        renderActions={(props) => (
-          <Actions
-            {...props}
-            containerStyle={{
-              position: "absolute",
-              right: 50,
-              bottom: 5,
-              zIndex: 9999,
-            }}
-            onPressActionButton={handlePhotoPicker}
-            icon={() => (
-              <Ionicons name="camera" size={30} color={colors.iconGray} />
-            )}
-          />
-        )}
-        timeTextStyle={{ right: { color: colors.iconGray } }}
-        renderSend={(props) => {
-          const { text, messageIdGenerator, user, onSend } = props;
-          return (
-            <TouchableOpacity
-              style={{
-                height: 40,
-                width: 40,
-                borderRadius: 40,
-                backgroundColor: colors.primary,
-                alignItems: "center",
-                justifyContent: "center",
-                marginBottom: 5,
-              }}
-              onPress={() => {
-                if (text && onSend) {
-                  onSend(
-                    {
-                      text: text.trim(),
-                      user,
-                      _id: messageIdGenerator,
-                    },
-                    true
-                  );
-                }
-              }}
-            >
-              <Ionicons name="send" size={20} color={colors.white} />
-            </TouchableOpacity>
-          );
-        }}
-        renderInputToolbar={(props) => (
-          <InputToolbar
-            {...props}
-            containerStyle={{
-              marginLeft: 10,
-              marginRight: 10,
-              marginBottom: 2,
-              borderRadius: 20,
-              paddingTop: 5,
-            }}
-          />
-        )}
-        renderBubble={(props) => (
-          <Bubble
-            {...props}
-            textStyle={{ right: { color: colors.text } }}
-            wrapperStyle={{
-              left: {
-                backgroundColor: colors.white,
-              },
-              right: {
-                backgroundColor: colors.tertiary,
-              },
-            }}
-          />
-        )}
-        renderMessageImage={(props) => {
-          return (
-            <View style={{ borderRadius: 15, padding: 2 }}>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible(true);
-                  setSeletedImageView(props.currentMessage.image);
-                }}
-              >
-                <Image
-                  resizeMode="contain"
-                  style={{
-                    width: 200,
-                    height: 200,
-                    padding: 6,
-                    borderRadius: 15,
-                    resizeMode: "cover",
-                  }}
-                  source={{ uri: props.currentMessage.image }}
-                />
-                {selectedImageView ? (
-                  <ImageView
-                    imageIndex={0}
-                    visible={modalVisible}
-                    onRequestClose={() => setModalVisible(false)}
-                    images={[{ uri: selectedImageView }]}
-                  />
-                ) : null}
-              </TouchableOpacity>
-            </View>
-          );
-        }}
-      /> */}
     </ImageBackground>
   );
 };
@@ -436,12 +331,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#DCF8C5",
     padding: 8,
     margin: 8,
+    elevation: 5,
     borderRadius: 8,
     maxWidth: "80%",
   },
   receiver: {
     alignSelf: "flex-start",
-    backgroundColor: "#E5E5E5",
+    backgroundColor: "white",
+    elevation: 5,
     padding: 8,
     margin: 8,
     borderRadius: 8,

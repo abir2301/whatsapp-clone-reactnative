@@ -75,24 +75,7 @@ export const uploadFile = async (uri, path, type) => {
   const url = await getDownloadURL(snapshot.ref);
 
   return { url, fileName };
-  // const fileRef = ref(storage, path);
-
-  // try {
-  //   const response = await fetch(uri);
-  //   const blob = await response.blob();
-
-  //   await uploadBytes(fileRef, blob);
-
-  //   // Get the download URL for the file
-  //   const url = await getDownloadURL(fileRef);
-
-  //   const fileName = path.substring(path.lastIndexOf("/") + 1);
-
-  //   return { url, fileName };
-  // } catch (error) {
-  //   console.error("Error uploading file:", error);
-  //   throw error;
-  // }
+  
 };
 
 const palette = {
